@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Heart Disease Prediction</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css">
+</head>
+<body>
+    <div class="container mt-5">
+        <h1 class="text-center mb-4">Heart Disease Prediction</h1>
+        <form id="predictionForm" method="post" action="/predict">
+            <div class="mb-3">
+                <label for="age" class="form-label">Age</label>
+                <input type="number" id="age" name="age" class="form-control" required>
+            </div>
+            <div class="mb-3">
+                <label for="sex" class="form-label">Sex (0: Female, 1: Male)</label>
+                <input type="number" id="sex" name="sex" class="form-control" min="0" max="1" required>
+            </div>
+            <div class="mb-3">
+                <label for="cp" class="form-label">Chest Pain Type (0-3)</label>
+                <input type="number" id="cp" name="cp" class="form-control" min="0" max="3" required>
+            </div>
+            <div class="mb-3">
+                <label for="trestbps" class="form-label">Resting Blood Pressure</label>
+                <input type="number" id="trestbps" name="trestbps" class="form-control" required>
+            </div>
+            <div class="mb-3">
+                <label for="chol" class="form-label">Serum Cholesterol (mg/dl)</label>
+                <input type="number" id="chol" name="chol" class="form-control" required>
+            </div>
+            <div class="mb-3">
+                <label for="fbs" class="form-label">Fasting Blood Sugar > 120 mg/dl (1: True, 0: False)</label>
+                <input type="number" id="fbs" name="fbs" class="form-control" min="0" max="1" required>
+            </div>
+            <div class="mb-3">
+                <label for="restecg" class="form-label">Resting Electrocardiographic Results (0, 1, 2)</label>
+                <input type="number" id="restecg" name="restecg" class="form-control" min="0" max="2" required>
+            </div>
+            <div class="mb-3">
+                <label for="thalach" class="form-label">Maximum Heart Rate Achieved</label>
+                <input type="number" id="thalach" name="thalach" class="form-control" required>
+            </div>
+            <div class="mb-3">
+                <label for="exang" class="form-label">Exercise Induced Angina (1: Yes, 0: No)</label>
+                <input type="number" id="exang" name="exang" class="form-control" min="0" max="1" required>
+            </div>
+            <div class="mb-3">
+                <label for="oldpeak" class="form-label">Oldpeak (ST Depression)</label>
+                <input type="text" id="oldpeak" name="oldpeak" class="form-control" required>
+            </div>
+            <div class="mb-3">
+                <label for="slope" class="form-label">Slope of Peak Exercise ST Segment</label>
+                <input type="number" id="slope" name="slope" class="form-control" required>
+            </div>
+            <div class="mb-3">
+                <label for="ca" class="form-label">Number of Major Vessels (0-3) Colored by Fluoroscopy</label>
+                <input type="number" id="ca" name="ca" class="form-control" min="0" max="3" required>
+            </div>
+            <div class="mb-3">
+                <label for="thal" class="form-label">Thalassemia (0: Normal, 1: Fixed Defect, 2: Reversible Defect)</label>
+                <input type="number" id="thal" name="thal" class="form-control" min="0" max="2" required>
+            </div>
+
+            <button type="submit" class="btn btn-primary">Predict</button>
+        </form>
+
+        <div id="results" class="mt-5"></div>
+    </div>
+
+    <script>
+        const form = document.getElementById('predictionForm');
+
+        form.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const formData = new FormData(form);
+            const data = Object.fromEntries(formData.entries());
+            const features = Object.values(data).map(Number);
+
+            try {
+                const response = await fetch('/predict', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ features })
+                });
+                const result = await response.json();
+                const predictions = result.predictions;
+                const majorityVote = Object.values(predictions).filter(prob => prob > 0.4).length > 5;
+
+                const summary = majorityVote
+                    ? `<div class="alert alert-danger text-center" role="alert"><strong>Result:</strong> Likely to have heart disease</div>`
+                    : `<div class="alert alert-success text-center" role="alert"><strong>Result:</strong> Unlikely to have heart disease</div>`;
+
+                const details = `
+                    <h2>Detailed Predictions</h2>
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Algorithm</th>
+                                <th>Probability</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${Object.entries(predictions)
+                                .map(
+                                    ([algorithm, prob]) =>
+                                        `<tr><td>${algorithm}</td><td>${(prob * 100).toFixed(2)}%</td></tr>`
+                                )
+                                .join('')}
+                        </tbody>
+                    </table>
+                `;
+
+                document.getElementById('results').innerHTML = summary + details;
+            } catch (error) {
+                console.error('Error:', error);
+                document.getElementById('results').innerHTML = `<p class="text-danger">An error occurred. Please try again.</p>`;
+            }
+        });
+    </script>
+</body>
+</html>
